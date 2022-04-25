@@ -4,14 +4,16 @@ __version__ = "0.1.0"
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.multiclass import type_of_target
+from sklearn.utils.validation import check_is_fitted
 from lightgbm import LGBMClassifier, LGBMRegressor
 from scipy.special import expit
 import pandas as pd
-import warnings
+
+__all__ = ["LightgbmEmbedding"]
 
 
-def EstimatorFactory(target_type, n_dim=100, args={}):
-    """Factory Function"""
+def LightgbmFactory(target_type, n_dim=100, args={}):
+    """LightGBM Factory"""
 
     if target_type is "binary":
         model = LGBMClassifier(n_estimators=n_dim, **args)
@@ -26,32 +28,71 @@ def EstimatorFactory(target_type, n_dim=100, args={}):
 
 
 class LightgbmEmbedding(BaseEstimator, TransformerMixin):
-    def __init__(self, n_dim=100, **lgb_kwargs):
-        if ("n_estimators" in lgb_kwargs) and (n_dim is not None):
-            warnings.warn(
+    """
+    LightGBM Feature Embeddings class. Leaf values for each trees are used for embedding.
+
+
+    Parameters
+    -----------
+    n_dim: int, default = 100
+        Number of dimensions to use. *Note: For multiclass problems dimension will be n_dim*num_classes
+
+    **lgb_kwargs: dict, default = {}
+        LightGBM arguments in dictionary format
+
+
+    Notes
+    ----------
+    Scikit-learn util ``type_of_target`` fails at identifying regression task with array of integers.
+    If that's the case, provide target type in fit method ``fit(X, y, target_type='continuous')``.
+     For scikit-learn pipelines pipeline.fit(X, y, model__target_type='continuous'))
+
+
+    Examples
+    -----------
+    >>> from lightgbm_embedding import LightgbmEmbedding
+    >>> from sklearn.datasets import load_breast_cancer
+    >>> X, y = load_breast_cancer(return_X_y=True)
+
+    >>> embedder = LightgbmEmbedding().fit(X, y)
+    >>> emb.transform(X)
+    """
+
+    def __init__(self, n_dim=100, lgb_kwargs={}):
+        if "n_estimators" in lgb_kwargs:
+            print(
                 f"Ignoring n_estimators in lgb_kwargs because n_dim is provided. n_dim={n_dim}"
             )
-            del lgb_kwargs["n_estimators"]
+
+            lgb_kwargs["n_estimators"] = n_dim
 
         self.n_dim = n_dim
         self.lgb_kwargs = lgb_kwargs
-
-    def _handle_object_type(self, X):
-        for col in X.columns:
-            if X[col].dtype.name in ["object", "string"]:
-                X[col] = X[col].astype("category")
-
-        return X
+        self._is_fit = False
 
     def fit(self, X, y, target_type=None):
-        # X = self._handle_object_type(X)
+        """
+        Fit LightGBM Embedder.
 
+        Parameters
+        ----------
+        X : Union[pd.DataFrame, np.ndarray]
+            2-D (n_samples, n_features) feature array.
+
+        y : Union[pd.Series, np.ndarray]
+            1-D target array.
+
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
         if target_type is not None:
             self.target_type = target_type
         else:
             self.target_type = type_of_target(y)
 
-        self._model = EstimatorFactory(
+        self._model = LightgbmFactory(
             self.target_type, n_dim=self.n_dim, args=self.lgb_kwargs
         )
 
@@ -63,8 +104,30 @@ class LightgbmEmbedding(BaseEstimator, TransformerMixin):
         self._booster = self._model._Booster
 
         self._tree_dict = self._get_tree_leaf_value_dict()
+        self._is_fit = True
+
+        return self
 
     def transform(self, X, y=None):
+        """
+        Get embeddings from fitted estimator.
+
+        Parameters
+        ----------
+        X : Union[pd.DataFrame, np.ndarray]
+            2-D (n_samples, n_features) feature array.
+
+        y : None
+            Exists for compatibility with pipelines.
+
+        Returns
+        ----------
+        X_embeddings : pd.DataFrame
+            Embeddings dataframe with shape (n_samples, n_dim)
+
+        """
+
+        check_is_fitted(self)
 
         preds = self._model.predict(X, pred_leaf=True)
 
@@ -82,6 +145,7 @@ class LightgbmEmbedding(BaseEstimator, TransformerMixin):
         return pd.DataFrame(embeds, columns=[f"dim_{i}" for i in range(self.n_dim)])
 
     def _get_tree_leaf_value_dict(self):
+        """Returns leaf values for in dictionary format. Type: List[f"{tree_id}_{leaf_id}", leaf_value]"""
         tree_df = self._booster.trees_to_dataframe()[
             ["tree_index", "node_index", "value", "weight", "count"]
         ]
@@ -104,3 +168,7 @@ class LightgbmEmbedding(BaseEstimator, TransformerMixin):
         tree_dict = tree_df.to_dict()
 
         return tree_dict
+
+    def __sklearn_is_fitted__(self):
+        """Sklearn util method for is_fitted validation."""
+        return True if self._is_fit else False
