@@ -2,6 +2,9 @@
 
 Feature embeddings with LightGBM
 
+## Installation
+
+    pip install lightgbm-embedding
 
 ## Examples
 ```python
