@@ -2,7 +2,18 @@
 name = "lightgbm_embedding"
 version = "0.1.0"
 description = "Feature embeddings with LightGBM"
-authors = ["Atilla Karaahmetoğly"]
+authors = ["Atilla Karaahmetoğlu <atilla.karaahmetoglu@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+]
+keywords = ["nlp", "turkish"]
+include = ["LICENSE"]
 
 [tool.poetry.dependencies]
 python = "^3.7"
