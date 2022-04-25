@@ -5,6 +5,10 @@ Feature embeddings with LightGBM
 
 ## Examples
 ```python
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from lightgbm_embedding import LightgbmEmbedding
+
 df = pd.read_csv(
     "https://gist.githubusercontent.com/curran/a08a1080b88344b0c8a7/raw/0e7a9b0a5d22642a06d3d5b9bcbad9890c8ee534/iris.csv"
 )
