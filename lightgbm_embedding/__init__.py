@@ -8,6 +8,7 @@ from sklearn.utils.validation import check_is_fitted
 from lightgbm import LGBMClassifier, LGBMRegressor
 from scipy.special import expit
 import pandas as pd
+import multiprocessing as mp
 
 __all__ = ["LightgbmEmbedding"]
 
@@ -103,12 +104,22 @@ class LightgbmEmbedding(BaseEstimator, TransformerMixin):
         self._model.fit(X, y)
         self._booster = self._model._Booster
 
-        self._tree_dict = self._get_tree_leaf_value_dict()
+        # self._tree_dict = self._get_tree_leaf_value_dict()
+        self._leaf_hash_map = self._get_tree_leaf_value_dict_list()
         self._is_fit = True
 
         return self
 
-    def transform(self, X, y=None):
+    def _get_leaf_value(self, row: list):
+        """Get leaf values from row of leaf index. Input row shape (n_trees,)"""
+        embed = [
+            self._tree_dict[f"{tree_id}_{leaf_id}"]
+            for tree_id, leaf_id in enumerate(row)
+        ]
+
+        return embed
+
+    def transform(self, X, y=None, n_jobs=1):
         """
         Get embeddings from fitted estimator.
 
@@ -130,19 +141,41 @@ class LightgbmEmbedding(BaseEstimator, TransformerMixin):
         check_is_fitted(self)
 
         preds = self._model.predict(X, pred_leaf=True)
+        preds = pd.DataFrame(preds)
 
-        embeds = []
-        for pred in preds:
-            embed = [
-                self._tree_dict[f"{tree_id}_{leaf_id}"]
-                for tree_id, leaf_id in enumerate(pred)
-            ]
+        for col in preds.columns:
+            preds[col] = preds[col].map(self._leaf_hash_map[col])
 
-            if self.target_type in ["binary", "multiclass"]:
-                embed = expit(embed)
-            embeds.append(embed)
+        preds.columns = [f"dim_{i}" for i in range(self.n_dim)]
 
-        return pd.DataFrame(embeds, columns=[f"dim_{i}" for i in range(self.n_dim)])
+        if self.target_type in ["binary", "multiclass"]:
+            preds = expit(preds)
+
+        return preds
+
+    def _get_tree_leaf_value_dict_list(self):
+        """Returns list with [index:tree_id, values:leaf values]"""
+        tree_df = self._booster.trees_to_dataframe()[
+            ["tree_index", "node_index", "value", "weight", "count"]
+        ]
+
+        # Ignore not terminal nodes to leave out only leaves
+        tree_df["node_index"] = (
+            tree_df["node_index"]
+            .str.replace(r"\d+-L(\d+)", "\\1", regex=True)
+            .replace(r"\d+-S(\d+)", np.nan, regex=True)
+        )
+
+        tree_df = tree_df[tree_df["node_index"].notnull()]
+        tree_df["node_index"] = tree_df["node_index"].apply(int)
+
+        hash_map = []
+
+        for i in range(100):
+            tmp = tree_df[tree_df["tree_index"] == i].reset_index(drop=True)
+            hash_map.append(pd.Series(tmp["value"], index=tmp["node_index"]).to_dict())
+
+        return hash_map
 
     def _get_tree_leaf_value_dict(self):
         """Returns leaf values for in dictionary format. Type: List[f"{tree_id}_{leaf_id}", leaf_value]"""
