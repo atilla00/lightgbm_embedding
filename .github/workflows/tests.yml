@@ -1,6 +1,9 @@
 name: test
 
-on: workflow_dispatch
+on: 
+  - push
+  - pull_request
+  - workflow_dispatch
 
 jobs:
   test:
@@ -47,7 +50,5 @@ jobs:
         
       # run test suite
       - name: Run tests
-        run: |
-          source .venv/bin/activate
-          pytest tests/
-          coverage report
+        run: poetry run pytest --cov
+          
