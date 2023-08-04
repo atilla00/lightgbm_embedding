@@ -15,7 +15,8 @@ keywords = ["nlp", "turkish"]
 include = ["LICENSE"]
 
 [tool.poetry.dependencies]
-python = ">=3.8"
+scipy = ">=1.10.0, < 1.11.0"
+python = ">=3.8, <3.12"
 pandas = "^1.0.0"
 scikit-learn = "^1.0.0"
 lightgbm = "^3.0.0"
