@@ -1,11 +1,15 @@
-from lightgbm_embedding import __version__, LightgbmEmbedding
-from sklearn.model_selection import train_test_split
+import importlib.metadata
 import pandas as pd
 import numpy as np
 
+__package_version__ = importlib.metadata.version("lightgbm_embedding")
+from sklearn.model_selection import train_test_split
+from lightgbm_embedding import __version__, LightgbmEmbedding
+
 
 def test_version():
-    assert __version__ == "0.1.2"
+    print(__version__)
+    assert __version__ == __package_version__
 
 
 def test_binary_classification():
