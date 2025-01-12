@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "lightgbm_embedding"
-version = "0.1.2"
+version = "0.2.0"
 description = "Feature embeddings with LightGBM"
 authors = ["Atilla Karaahmetoğlu <atilla.karaahmetoglu@gmail.com>"]
 license = "MIT"
@@ -8,20 +8,22 @@ readme = "README.md"
 
 classifiers = [
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 keywords = ["lightgbm", "embeddings"]
 include = ["LICENSE"]
 
 [tool.poetry.dependencies]
-scipy = ">=1.10.0, < 1.11.0"
-python = ">=3.8, <3.12"
+python = ">=3.9, <3.14"
+numpy = "^1.0.0"
+scipy = "*"
 pandas = "^1.0.0"
 scikit-learn = "^1.0.0"
-lightgbm = "^3.0.0"
+lightgbm = "*"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"

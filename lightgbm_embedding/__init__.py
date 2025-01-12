@@ -1,13 +1,13 @@
-__version__ = "0.1.2"
+import importlib.metadata
+__version__ = importlib.metadata.version('lightgbm_embedding')
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.utils.multiclass import type_of_target
 from sklearn.utils.validation import check_is_fitted
 from lightgbm import LGBMClassifier, LGBMRegressor
-from scipy.special import expit
+from scipy.special import expit, softmax
 import pandas as pd
-import multiprocessing as mp
 
 __all__ = ["LightgbmEmbedding"]
 
@@ -147,8 +147,10 @@ class LightgbmEmbedding(BaseEstimator, TransformerMixin):
 
         preds.columns = [f"dim_{i}" for i in range(self.n_dim)]
 
-        if self.target_type in ["binary", "multiclass"]:
+        if self.target_type == "binary":
             preds = expit(preds)
+        elif self.target_type == "multiclass":
+            preds = softmax(preds, axis=1)
 
         return preds
 
