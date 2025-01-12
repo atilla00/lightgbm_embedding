@@ -1,5 +1,6 @@
 import importlib.metadata
-__version__ = importlib.metadata.version('lightgbm_embedding')
+
+__version__ = importlib.metadata.version("lightgbm_embedding")
 
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
